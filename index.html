@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>내 일본어 단어장</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+.wrap{max-width:720px;margin:0 auto;padding:2rem 1rem}
+h1{font-size:22px;font-weight:600;margin-bottom:1.5rem}
+h1 span{color:#1D9E75}
+
+/* Auth */
+.auth-wrap{max-width:400px;margin:6rem auto;padding:2rem;background:#fff;border-radius:16px;border:1px solid #e8e8e8;text-align:center}
+.auth-wrap h2{font-size:20px;font-weight:600;margin-bottom:8px}
+.auth-wrap p{font-size:14px;color:#888;margin-bottom:1.5rem}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;background:#fff;font-size:15px;font-family:inherit;cursor:pointer;transition:background 0.15s}
+.google-btn:hover{background:#f5f5f3}
+.google-btn img{width:20px;height:20px}
+.user-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding:10px 14px;background:#fff;border-radius:10px;border:1px solid #e8e8e8}
+.user-bar span{font-size:13px;color:#555}
+.signout-btn{font-size:13px;color:#888;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px}
+.signout-btn:hover{background:#f0f0ee;color:#1a1a1a}
+
+.tabs{display:flex;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;margin-bottom:1.5rem;width:fit-content;background:#fff}
+.tab{padding:9px 16px;font-size:13px;cursor:pointer;background:transparent;border:none;color:#888}
+.tab.active{background:#f0f0ee;color:#1a1a1a;font-weight:600}
+.tab:not(:last-child){border-right:1px solid #e0e0e0}
+.section{display:none}.section.active{display:block}
+
+input,select,textarea{padding:9px 12px;border:1px solid #ddd;border-radius:8px;background:#fafafa;color:#1a1a1a;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75}
+.search-row{display:flex;gap:8px;margin-bottom:1rem}
+.search-row input{flex:1}
+.btn{padding:9px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;font-size:14px;cursor:pointer;font-family:inherit;transition:background 0.15s}
+.btn:hover{background:#f0f0ee}
+.btn-primary{background:#1D9E75;color:#fff;border-color:#1D9E75}
+.btn-primary:hover{background:#0F6E56}
+
+.result-area{margin-bottom:1rem;min-height:60px}
+.result-card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1rem 1.25rem;margin-bottom:8px}
+.result-word{font-size:28px;font-weight:600;margin-bottom:6px}
+.reading-row{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.reading-kana{font-size:15px;color:#185FA5}
+.reading-sep{color:#ccc}
+.reading-label{font-size:11px;padding:1px 7px;border-radius:20px;background:#f0f0ee;color:#666}
+.reading-val{font-size:14px;color:#185FA5;margin-left:2px}
+.meaning-text{font-size:14px;color:#555;margin-bottom:8px;line-height:1.5}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:11px;padding:2px 8px;border-radius:20px;background:#E6F1FB;color:#0C447C}
+.add-btn-full{width:100%;margin-top:12px;padding:10px;border:none;border-radius:8px;background:#1D9E75;color:#fff;font-size:14px;cursor:pointer;font-family:inherit}
+.add-btn-full:hover{background:#0F6E56}
+
+.empty{text-align:center;padding:3rem 1rem;color:#999;font-size:14px}
+.empty .icon{font-size:40px;margin-bottom:10px}
+
+.word-list{display:flex;flex-direction:column;gap:6px}
+.word-row{display:grid;grid-template-columns:56px 100px 1fr auto auto;align-items:center;gap:10px;background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:10px 14px;cursor:pointer;transition:border-color 0.15s}
+.word-row:hover{border-color:#aaa}
+.word-row.open{border-color:#1D9E75}
+.word-row .jp{font-size:20px;font-weight:600}
+.word-row .ro{font-size:12px;color:#185FA5}
+.word-row .mean{font-size:13px;color:#666}
+.del-btn{background:none;border:none;color:#bbb;cursor:pointer;padding:4px;border-radius:4px;font-size:18px;line-height:1}
+.del-btn:hover{color:#e05555}
+
+.dict-panel{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1.25rem;margin-bottom:10px}
+.dict-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.dict-word{font-size:34px;font-weight:600}
+.dict-kana{font-size:16px;color:#185FA5;margin-top:2px}
+.dict-romaji{font-size:13px;color:#888;margin-top:2px}
+.dict-close{background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;padding:4px}
+.dict-close:hover{color:#555}
+.dict-section{margin-bottom:14px}
+.dict-label{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
+.dict-meaning{font-size:15px;color:#1a1a1a;margin-bottom:2px}
+.dict-pos{font-size:12px;color:#888;margin-bottom:6px}
+.dict-example{background:#f8f8f6;border-radius:8px;padding:10px 12px;margin-top:6px}
+.dict-link{color:#185FA5;font-size:13px}
+
+.fc-wrap{display:flex;flex-direction:column;align-items:center;gap:1rem;padding:0.5rem 0}
+.fc-stats{display:flex;gap:16px;font-size:13px;color:#888}
+.fc-stats b{color:#1a1a1a}
+.card-area{width:100%;perspective:1000px;cursor:pointer}
+.card-inner{width:100%;min-height:230px;position:relative;transform-style:preserve-3d;transition:transform 0.4s}
+.card-inner.flipped{transform:rotateY(180deg)}
+.card-face{position:absolute;width:100%;min-height:230px;backface-visibility:hidden;background:#fff;border:1px solid #e8e8e8;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:2rem}
+.card-back{transform:rotateY(180deg)}
+.card-hint{font-size:12px;color:#bbb;margin-top:8px}
+.card-main{font-size:52px;font-weight:600}
+.card-kana{font-size:20px;color:#185FA5}
+.card-ro-label{font-size:11px;color:#aaa;margin-top:4px}
+.card-ro-val{font-size:18px;font-weight:600}
+.card-mean{font-size:15px;color:#555;margin-top:4px}
+.fc-btns{display:flex;gap:10px;width:100%}
+.fc-btns button{flex:1;padding:12px;border-radius:10px;font-size:14px;cursor:pointer;border:1px solid #ddd;background:#fff;font-family:inherit;transition:background 0.15s}
+.btn-wrong{border-color:#f09595!important;color:#a32d2d!important}.btn-wrong:hover{background:#fff0f0}
+.btn-right{border-color:#5dcaa5!important;color:#085041!important}.btn-right:hover{background:#f0faf6}
+.fc-done{text-align:center;padding:2rem}
+.fc-done .score{font-size:40px;font-weight:700;color:#1a1a1a;margin-bottom:6px}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+
+.quiz-options{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.quiz-opt-btn{padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#888;font-size:13px;cursor:pointer;font-family:inherit}
+.quiz-opt-btn.selected{background:#f0f0ee;color:#1a1a1a;border-color:#aaa;font-weight:600}
+.quiz-opt-btn:hover{background:#f5f5f3}
+.quiz-table{width:100%;border-collapse:collapse;margin-bottom:1rem;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e8e8e8}
+.quiz-table th{font-size:12px;color:#888;font-weight:600;padding:10px 12px;border-bottom:1px solid #eee;text-align:left;background:#fafafa}
+.quiz-table td{padding:8px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.quiz-table tr:last-child td{border-bottom:none}
+.quiz-num{font-size:12px;color:#bbb;width:28px}
+.revealed-jp{font-size:18px;font-weight:600}
+.revealed-ro{font-size:14px;color:#185FA5}
+.revealed-mean{font-size:14px;color:#555}
+.quiz-input{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;background:#fafafa;font-family:inherit}
+.quiz-input.correct{border-color:#5dcaa5;background:#f0faf6;color:#085041}
+.quiz-input.wrong{border-color:#f09595;background:#fff0f0;color:#a32d2d}
+.quiz-answer{font-size:12px;color:#a32d2d;margin-top:3px;display:none}
+.quiz-answer.show{display:block}
+.quiz-actions{display:flex;gap:8px;flex-wrap:wrap}
+.quiz-score{font-size:14px;color:#555;margin-top:10px;display:none}
+.quiz-score b{color:#1a1a1a;font-size:18px}
+
+.loading{text-align:center;padding:2rem;color:#999;font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- 로그인 화면 -->
+<div id="authScreen" style="display:none">
+  <div class="auth-wrap">
+    <div style="font-size:40px;margin-bottom:12px">🍵</div>
+    <h2>내 일본어 단어장</h2>
+    <p>구글 계정으로 로그인하면<br>어디서든 내 단어장을 볼 수 있어요</p>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <img src="https://www.google.com/favicon.ico" alt="Google">
+      Google로 로그인
+    </button>
+  </div>
+</div>
+
+<!-- 앱 메인 -->
+<div id="appScreen" style="display:none">
+  <div class="wrap">
+    <h1>🍵 <span>내</span> 일본어 단어장</h1>
+    <div class="user-bar">
+      <span id="userEmail"></span>
+      <button class="signout-btn" onclick="signOut()">로그아웃</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('search')">🔍 단어 검색</button>
+      <button class="tab" onclick="switchTab('list')">📖 내 단어장</button>
+      <button class="tab" onclick="switchTab('flash')">🃏 플래시카드</button>
+      <button class="tab" onclick="switchTab('quiz')">✏️ 단어시험</button>
+    </div>
+
+    <div id="sec-search" class="section active">
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="예: 食べる, 학교, water ..." onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="btn btn-primary" onclick="doSearch()">검색</button>
+      </div>
+      <div class="result-area" id="resultArea">
+        <div class="empty"><div class="icon">🔍</div>일본어, 한국어, 영어로 검색해보세요</div>
+      </div>
+    </div>
+
+    <div id="sec-list" class="section">
+      <div id="dictPanel" style="display:none"></div>
+      <div id="wordList"></div>
+    </div>
+
+    <div id="sec-flash" class="section"><div id="flashArea"></div></div>
+
+    <div id="sec-quiz" class="section">
+      <div id="quizSetup">
+        <p style="font-size:13px;color:#888;margin-bottom:10px">공개할 열을 선택하세요 — 나머지 두 열을 직접 채워요.</p>
+        <div class="quiz-options">
+          <button class="quiz-opt-btn selected" id="qopt-kanji" onclick="selectMode('kanji')">🈳 한자 공개</button>
+          <button class="quiz-opt-btn" id="qopt-romaji" onclick="selectMode('romaji')">🔤 로마자 공개</button>
+          <button class="quiz-opt-btn" id="qopt-meaning" onclick="selectMode('meaning')">💬 뜻 공개</button>
+          <button class="quiz-opt-btn" id="qopt-random" onclick="selectMode('random')">🔀 랜덤 혼합</button>
+        </div>
+        <button class="btn btn-primary" onclick="startQuiz()">▶ 시험 시작</button>
+      </div>
+      <div id="quizArea"></div>
+    </div>
+  </div>
+</div>
+
+<div id="loadingScreen" class="loading" style="padding-top:6rem">잠시만요...</div>
+
+<script>
+const SUPABASE_URL = 'https://gtkobkwxmlepahhprper.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0a29ia3d4bWxlcGFoaHBycGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NTE1MjEsImV4cCI6MjA5NTUyNzUyMX0.Vww5_UtclZVTWkTZBUZ_xteGYBgkXG-ikzfciU7b1hs';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const hToR={"あ":"a","い":"i","う":"u","え":"e","お":"o","か":"ka","き":"ki","く":"ku","け":"ke","こ":"ko","さ":"sa","し":"shi","す":"su","せ":"se","そ":"so","た":"ta","ち":"chi","つ":"tsu","て":"te","と":"to","な":"na","に":"ni","ぬ":"nu","ね":"ne","の":"no","は":"ha","ひ":"hi","ふ":"fu","へ":"he","ほ":"ho","ま":"ma","み":"mi","む":"mu","め":"me","も":"mo","や":"ya","ゆ":"yu","よ":"yo","ら":"ra","り":"ri","る":"ru","れ":"re","ろ":"ro","わ":"wa","を":"wo","ん":"n","が":"ga","ぎ":"gi","ぐ":"gu","げ":"ge","ご":"go","ざ":"za","じ":"ji","ず":"zu","ぜ":"ze","ぞ":"zo","だ":"da","ぢ":"di","づ":"du","で":"de","ど":"do","ば":"ba","び":"bi","ぶ":"bu","べ":"be","ぼ":"bo","ぱ":"pa","ぴ":"pi","ぷ":"pu","ぺ":"pe","ぽ":"po","きゃ":"kya","きゅ":"kyu","きょ":"kyo","しゃ":"sha","しゅ":"shu","しょ":"sho","ちゃ":"cha","ちゅ":"chu","ちょ":"cho","にゃ":"nya","にゅ":"nyu","にょ":"nyo","ひゃ":"hya","ひゅ":"hyu","ひょ":"hyo","みゃ":"mya","みゅ":"myu","みょ":"myo","りゃ":"rya","りゅ":"ryu","りょ":"ryo","ぎゃ":"gya","ぎゅ":"gyu","ぎょ":"gyo","じゃ":"ja","じゅ":"ju","じょ":"jo","びゃ":"bya","びゅ":"byu","びょ":"byo","ぴゃ":"pya","ぴゅ":"pyu","ぴょ":"pyo","っ":"","ー":"-"};
+function toRomaji(h){if(!h)return'';let r='',i=0;while(i<h.length){const two=h.slice(i,i+2),one=h[i];if(hToR[two]){r+=hToR[two];i+=2;}else if(hToR[one]){r+=hToR[one];i++;}else{r+=one;i++;}}return r;}
+
+let words=[];
+let fcQueue=[],fcIdx=0,fcFlipped=false,wrongIds=new Set(),rightCount=0;
+let quizMode='kanji',quizWords=[],quizRevealed=[];
+let openDictId=null;
+let currentUser=null;
+
+// 인증 상태 감지
+sb.auth.onAuthStateChange(async (event, session) => {
+  document.getElementById('loadingScreen').style.display='none';
+  if(session){
+    currentUser=session.user;
+    document.getElementById('authScreen').style.display='none';
+    document.getElementById('appScreen').style.display='block';
+    document.getElementById('userEmail').textContent=currentUser.email;
+    await loadWords();
+    renderList();
+  } else {
+    currentUser=null;
+    document.getElementById('authScreen').style.display='block';
+    document.getElementById('appScreen').style.display='none';
+  }
+});
+
+async function signInWithGoogle(){
+  await sb.auth.signInWithOAuth({
+    provider:'google',
+    options:{redirectTo: window.location.href}
+  });
+}
+async function signOut(){
+  await sb.auth.signOut();
+}
+
+async function loadWords(){
+  const {data,error}=await sb.from('words').select('*').order('created_at',{ascending:false});
+  if(!error) words=data||[];
+}
+async function saveWord(word,reading,meaning,jlpt){
+  if(words.find(w=>w.word===word)){alert('이미 저장된 단어예요!');return;}
+  const {data,error}=await sb.from('words').insert([{user_id:currentUser.id,word,reading,meaning,jlpt}]).select().single();
+  if(!error){words.unshift(data);alert(`"${word}" 저장됐어요! ✅`);}
+  else alert('저장 중 오류가 발생했어요.');
+}
+async function deleteWord(id){
+  if(!confirm('이 단어를 삭제할까요?'))return;
+  const {error}=await sb.from('words').delete().eq('id',id);
+  if(!error){words=words.filter(w=>w.id!==id);if(openDictId===id)openDictId=null;renderList();}
+}
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['search','list','flash','quiz'][i]===t));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+t).classList.add('active');
+  if(t==='list')renderList();
+  if(t==='flash')startFlash();
+  if(t==='quiz'){document.getElementById('quizSetup').style.display='block';document.getElementById('quizArea').innerHTML='';}
+}
+
+async function doSearch(){
+  const q=document.getElementById('searchInput').value.trim();
+  if(!q)return;
+  const area=document.getElementById('resultArea');
+  area.innerHTML='<div class="empty"><div class="icon">⏳</div>검색 중...</div>';
+  try{
+    const res=await fetch(`https://jisho.org/api/v1/search/words?keyword=${encodeURIComponent(q)}`);
+    const data=await res.json();
+    if(!data.data||!data.data.length){area.innerHTML='<div class="empty">검색 결과가 없어요.</div>';return;}
+    area.innerHTML=data.data.slice(0,4).map(item=>{
+      const display=item.japanese[0]?.word||item.japanese[0]?.reading||item.slug;
+      const reading=item.japanese[0]?.reading||'';
+      const romaji=toRomaji(reading);
+      const meaning=item.senses[0]?.english_definitions?.slice(0,3).join(', ')||'';
+      const jlpt=(item.jlpt?.[0]||'').toUpperCase().replace('JLPT-','');
+      const pos=item.senses[0]?.parts_of_speech?.slice(0,2)||[];
+      return `<div class="result-card">
+        <div class="result-word">${display}</div>
+        <div class="reading-row">
+          <span class="reading-kana">${reading}</span>
+          <span class="reading-sep">|</span>
+          <span class="reading-label">로마자</span><span class="reading-val">${romaji}</span>
+        </div>
+        <div class="meaning-text">${meaning}</div>
+        <div class="tags">
+          ${jlpt?`<span class="pill">${jlpt}</span>`:''}
+          ${pos.map(p=>`<span class="pill">${p}</span>`).join('')}
+        </div>
+        <button class="add-btn-full" onclick="saveWord(${JSON.stringify(display)},${JSON.stringify(reading)},${JSON.stringify(meaning)},${JSON.stringify(jlpt)})">
+          + 단어장에 추가
+        </button>
+      </div>`;
+    }).join('');
+  }catch(e){area.innerHTML='<div class="empty">검색 중 오류가 발생했어요.</div>';}
+}
+
+function toggleDict(id){
+  openDictId=(openDictId===id)?null:id;
+  renderList();
+  if(openDictId!==null)loadDict(openDictId);
+}
+async function loadDict(id){
+  const w=words.find(x=>x.id===id);if(!w)return;
+  const panel=document.getElementById('dictPanel');
+  panel.style.display='block';
+  panel.innerHTML=`<div class="dict-panel">
+    <div class="dict-header">
+      <div>
+        <div class="dict-word">${w.word}</div>
+        <div class="dict-kana">${w.reading}</div>
+        <div class="dict-romaji">${toRomaji(w.reading)}</div>
+      </div>
+      <button class="dict-close" onclick="toggleDict('${id}')">✕</button>
+    </div>
+    <div class="dict-section">
+      <div class="dict-label">뜻</div>
+      <div class="dict-meaning">${w.meaning}</div>
+      ${w.jlpt?`<span class="pill" style="margin-top:6px;display:inline-block">${w.jlpt}</span>`:''}
+    </div>
+    <div class="dict-section">
+      <div class="dict-label">상세 정보 & 예문</div>
+      <div id="exampleArea" style="font-size:13px;color:#888">불러오는 중...</div>
+    </div>
+  </div>`;
+  try{
+    const res=await fetch(`https://jisho.org/api/v1/search/words?keyword=${encodeURIComponent(w.word)}`);
+    const data=await res.json();
+    const exArea=document.getElementById('exampleArea');if(!exArea)return;
+    const item=data.data?.[0];
+    if(!item){exArea.innerHTML='정보를 찾지 못했어요.';return;}
+    const senses=item.senses.slice(0,4).map((s,i)=>`<div style="margin-bottom:8px"><div class="dict-pos">${s.parts_of_speech?.join(', ')||''}</div><div class="dict-meaning">${i+1}. ${s.english_definitions?.join('; ')||''}</div></div>`).join('');
+    exArea.innerHTML=`${senses}<div class="dict-example"><a class="dict-link" href="https://jisho.org/search/${encodeURIComponent(w.word)}%20%23sentences" target="_blank">Jisho에서 예문 더 보기 →</a></div>`;
+  }catch(e){const exArea=document.getElementById('exampleArea');if(exArea)exArea.innerHTML='정보를 불러오지 못했어요.';}
+}
+
+function renderList(){
+  const panel=document.getElementById('dictPanel');
+  if(openDictId===null)panel.style.display='none';
+  const el=document.getElementById('wordList');
+  if(!words.length){el.innerHTML='<div class="empty"><div class="icon">📖</div>아직 저장된 단어가 없어요.<br>검색 탭에서 단어를 추가해봐요!</div>';return;}
+  el.innerHTML=`<div class="word-list">${words.map(w=>`
+    <div class="word-row${openDictId===w.id?' open':''}" onclick="toggleDict('${w.id}')">
+      <span class="jp">${w.word}</span>
+      <span class="ro">${toRomaji(w.reading)}</span>
+      <span class="mean">${w.meaning}</span>
+      ${w.jlpt?`<span class="pill">${w.jlpt}</span>`:'<span></span>'}
+      <button class="del-btn" onclick="event.stopPropagation();deleteWord('${w.id}')" aria-label="삭제">🗑</button>
+    </div>`).join('')}</div>`;
+}
+
+function startFlash(onlyWrong=false){
+  fcQueue=onlyWrong?words.filter(w=>wrongIds.has(w.id)):[...words];
+  if(!fcQueue.length){document.getElementById('flashArea').innerHTML='<div class="empty"><div class="icon">🃏</div>단어장에 단어를 먼저 추가해봐요!</div>';return;}
+  fcQueue.sort(()=>Math.random()-0.5);
+  fcIdx=0;fcFlipped=false;wrongIds=new Set();rightCount=0;renderCard();
+}
+function renderCard(){
+  const area=document.getElementById('flashArea');
+  if(fcIdx>=fcQueue.length){
+    area.innerHTML=`<div class="fc-done"><div class="score">${rightCount} / ${fcQueue.length}</div><p style="color:#888;margin-bottom:1.5rem">맞춘 단어</p>${wrongIds.size?`<button class="btn" style="margin-right:8px" onclick="startFlash(true)">틀린 ${wrongIds.size}개만 다시</button>`:''}<button class="btn" onclick="startFlash(false)">처음부터</button></div>`;return;
+  }
+  const w=fcQueue[fcIdx];fcFlipped=false;
+  area.innerHTML=`<div class="fc-wrap">
+    <div class="fc-stats"><div>${fcIdx+1} / ${fcQueue.length}</div><div><span class="status-dot" style="background:#5dcaa5"></span>맞음 <b>${rightCount}</b></div><div><span class="status-dot" style="background:#f09595"></span>틀림 <b>${wrongIds.size}</b></div></div>
+    <div class="card-area" onclick="flipCard()">
+      <div class="card-inner" id="cardInner">
+        <div class="card-face"><p style="font-size:12px;color:#bbb">읽는 법과 뜻은?</p><div class="card-main">${w.word}</div><div class="card-hint">탭해서 뒤집기</div></div>
+        <div class="card-face card-back"><div class="card-kana">${w.reading}</div><div class="card-ro-label">로마자</div><div class="card-ro-val">${toRomaji(w.reading)}</div><div class="card-mean">${w.meaning}</div>${w.jlpt?`<span class="pill" style="margin-top:6px">${w.jlpt}</span>`:''}</div>
+      </div>
+    </div>
+    <div class="fc-btns" id="fcBtns" style="display:none">
+      <button class="btn-wrong" onclick="markCard(false)">✕ 몰랐어요</button>
+      <button class="btn-right" onclick="markCard(true)">✓ 알았어요</button>
+    </div>
+  </div>`;
+}
+function flipCard(){if(fcFlipped)return;fcFlipped=true;document.getElementById('cardInner').classList.add('flipped');document.getElementById('fcBtns').style.display='flex';}
+function markCard(correct){if(correct)rightCount++;else wrongIds.add(fcQueue[fcIdx].id);fcIdx++;renderCard();}
+
+function selectMode(m){quizMode=m;document.querySelectorAll('.quiz-opt-btn').forEach(b=>b.classList.remove('selected'));document.getElementById('qopt-'+m).classList.add('selected');}
+function startQuiz(){
+  if(!words.length){document.getElementById('quizArea').innerHTML='<div class="empty"><div class="icon">✏️</div>단어장에 단어가 없어요.</div>';return;}
+  const pool=[...words].sort(()=>Math.random()-0.5);
+  quizWords=pool.slice(0,Math.min(10,pool.length));
+  const modes=['kanji','romaji','meaning'];
+  quizRevealed=quizWords.map((_,i)=>quizMode==='random'?modes[i%3]:quizMode);
+  document.getElementById('quizSetup').style.display='none';
+  renderQuizTable();
+}
+function renderQuizTable(){
+  const rows=quizWords.map((w,i)=>{
+    const rev=quizRevealed[i];const ro=toRomaji(w.reading);
+    function cell(type){
+      if(type===rev){const cls=type==='kanji'?'revealed-jp':type==='romaji'?'revealed-ro':'revealed-mean';const val=type==='kanji'?w.word:type==='romaji'?ro:w.meaning;return`<td class="${cls}">${val}</td>`;}
+      return`<td><input class="quiz-input" id="qi-${i}-${type}" placeholder="?" autocomplete="off"><div class="quiz-answer" id="qa-${i}-${type}">${type==='kanji'?w.word:type==='romaji'?ro:w.meaning}</div></td>`;
+    }
+    return`<tr><td class="quiz-num">${i+1}</td>${cell('kanji')}${cell('romaji')}${cell('meaning')}</tr>`;
+  }).join('');
+  document.getElementById('quizArea').innerHTML=`
+    <table class="quiz-table"><thead><tr><th></th><th>한자</th><th>로마자</th><th>한국어 뜻</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="quiz-actions">
+      <button class="btn" onclick="document.getElementById('quizSetup').style.display='block';document.getElementById('quizArea').innerHTML=''">← 다시 설정</button>
+      <button class="btn" onclick="startQuiz()">새 문제</button>
+      <button class="btn btn-primary" onclick="checkQuiz()">✓ 정답 확인</button>
+    </div>
+    <div class="quiz-score" id="quizScore"></div>`;
+}
+function checkQuiz(){
+  let correct=0,total=0;
+  quizWords.forEach((w,i)=>{
+    const rev=quizRevealed[i];const ro=toRomaji(w.reading);
+    ['kanji','romaji','meaning'].forEach(type=>{
+      if(type===rev)return;total++;
+      const inp=document.getElementById(`qi-${i}-${type}`);const ans=document.getElementById(`qa-${i}-${type}`);if(!inp)return;
+      const expected=type==='kanji'?w.word:type==='romaji'?ro:w.meaning;
+      const ok=inp.value.trim().toLowerCase()===expected.toLowerCase();
+      inp.classList.toggle('correct',ok);inp.classList.toggle('wrong',!ok&&inp.value.trim()!=='');
+      if(ans)ans.classList.toggle('show',!ok);if(ok)correct++;
+    });
+  });
+  const score=document.getElementById('quizScore');score.style.display='block';score.innerHTML=`결과: <b>${correct} / ${total}</b> 정답 🎉`;
+}
+</script>
+</body>
+</html>
